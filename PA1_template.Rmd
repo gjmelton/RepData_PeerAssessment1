@@ -2,7 +2,11 @@
 title: "PA1_template.Rmd"
 author: "Glenn J Melton"
 date: "9/26/2016"
-output: html_document
+output: 
+  html_document: 
+    fig_caption: yes
+    keep_md: yes
+    theme: journal
 keep_md: true
 ---
 
@@ -32,7 +36,7 @@ summary(actDf)
 dailyStepTtl <- aggregate(steps ~ date, actDf,  sum)
 ```
 Histogram Plot of aggregated summation of steps per day
-```{r histtogram}
+```{r histogram-dailysteps}
 hist(dailyStepTtl$steps, col = "green", 
 	xlab = "Distribution of Total Steps Taken Daily",
 	main = paste("Histogram of daily Steps from",
@@ -47,7 +51,7 @@ medianSteps <- median(dailyStepTtl$steps, na.rm = TRUE)
 Mean daily step totals(thou.) are: `r meanSteps/1000`, and the daily median step totals(thou.) are: `r medianSteps/1000`.
 
 ## What is the average daily activity pattern?
-```{r timeseries}
+```{r timeseries-of-intervals}
 ## aggregate mean of steps by interval
 meanDailySteps <- aggregate(steps ~ interval, actDf,  mean)
 
@@ -98,7 +102,7 @@ for(i in 1:nrow(imputeDf)) {
 ```
 Plot the data with missing NA values imputed
 
-```{r missing data histtogram}
+```{r histogram-missing-data}
 dailyStepTtl <- aggregate(steps ~ date, imputeDf,  sum)
 
 hist(dailyStepTtl$steps, col = "green", 
@@ -127,13 +131,14 @@ weekDays <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
 ## add a new column to the imputed Data Frame and load the "daytype"
 imputeDf$daytype <- c('weekend', 'weekday')[(weekdays(imputeDf$date, abbreviate=FALSE) %in% weekDays)+1L]
 ```
-Create panel plot scomparing weekday to weekend activity levels
-```{r}
+Create panel plot comparing weekday to weekend step activity levels
+```{r panelplot-weekday-vs-weekend}
 suppressWarnings(suppressMessages(library(lattice)))
 ## aggregate data and plot with lattice
 dailySteps <- aggregate(steps ~ interval + daytype, imputeDf, mean)
 
-xyplot(steps ~ interval | daytype, dailySteps, type = "l",
+xyplot(steps ~ interval | daytype, groups = daytype,
+	data = dailySteps, type = "l",
 	layout = c(1, 2),
 	ylab = "Step Count",
 	xlab = "Interval",
