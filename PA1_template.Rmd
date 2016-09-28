@@ -9,6 +9,9 @@ keep_md: true
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 options(digits = 3)
+```
+
+## R Markdown
 
 ## Loading and preprocessing the data
 ```{r dataLoad}
