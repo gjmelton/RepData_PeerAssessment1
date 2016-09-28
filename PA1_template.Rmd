@@ -1,25 +1,138 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template.Rmd"
+author: "Glenn J Melton"
+date: "9/26/2016"
+output: html_document
+keep_md: true
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(digits = 3)
 
 ## Loading and preprocessing the data
+```{r dataLoad}
+## load libraries being used
 
+suppressWarnings(suppressMessages(library(lubridate)))
+suppressWarnings(suppressMessages(library(dplyr)))
 
+## read prior downloaded coursera supplied data
+actDf <- read.csv("activity.csv")
+actDf$date <- as.Date(as.character(actDf$date))
+summary(actDf)
+```
 
 ## What is mean total number of steps taken per day?
 
+```{r}
+dailyStepTtl <- aggregate(steps ~ date, actDf,  sum)
+```
+Histogram Plot of aggregated summation of steps per day
+```{r histtogram}
+hist(dailyStepTtl$steps, col = "green", 
+	xlab = "Distribution of Total Steps Taken Daily",
+	main = paste("Histogram of daily Steps from",
+		 		as.character(min(actDf$date)), "through",
+				as.character(max(actDf$date)))
+)
 
+meanSteps <- mean(dailyStepTtl$steps, na.rm = TRUE)
+medianSteps <- median(dailyStepTtl$steps, na.rm = TRUE)
+```
+
+Mean daily step totals(thou.) are: `r meanSteps/1000`, and the daily median step totals(thou.) are: `r medianSteps/1000`.
 
 ## What is the average daily activity pattern?
+```{r timeseries}
+## aggregate mean of steps by interval
+meanDailySteps <- aggregate(steps ~ interval, actDf,  mean)
 
+with(meanDailySteps,
+	 plot(interval, steps, type = "l", col = "blue", lwd = 2,
+		  xlab = "Aggregated 5 Minute Recording Intervals",
+		  ylab = "Mean Number of Steps Over Period",
+		  main = paste("Time Series Analysis of Daily Steps from",
+							as.character(min(actDf$date)), "through",
+							as.character(max(actDf$date)))
+		 )
+)
+abline(v = meanDailySteps[which.max(meanDailySteps$steps), 1], col = "red", lwd = 2)
+```
 
+Calculate the interval with the most average steps
+
+```{r}
+maxSteps <- which.max(meanDailySteps$steps)
+maxInterval <- meanDailySteps[maxSteps, 1]
+```
+The interval with the most steps is: `r maxInterval` as shown in red on the above Time Series plot.
 
 ## Imputing missing values
 
+```{r}
+origMissingSteps <- sum(is.na(actDf$steps))
+origMissingSteps
+```
+There are `r origMissingSteps` observations with missing data in the "steps" column.
 
+Looking at the data, there are 288 intervals per day which is more granular rather than days of the week to replace the missing data. The function "iStep" returns the mean of the steps for the interval passed.
+
+```{r}
+## create working dataset from original
+imputeDf <- actDf
+## function that returns mean for an interval
+iSteps <- function(x) {
+    mean(imputeDf[imputeDf$interval == x, ]$steps, na.rm = TRUE)
+}
+
+## impute missing values useing above iStep funcion as needed
+for(i in 1:nrow(imputeDf)) {
+    if(is.na(imputeDf[i, ]$steps)) {
+    	imputeDf[i, ]$steps <- iSteps(imputeDf[i, ]$interval)
+    }
+}
+```
+Plot the data with missing NA values imputed
+
+```{r missing data histtogram}
+dailyStepTtl <- aggregate(steps ~ date, imputeDf,  sum)
+
+hist(dailyStepTtl$steps, col = "green", 
+	xlab = "Distribution of Total Steps Taken Daily",
+	main = paste("Histogram of daily Steps from",
+		 as.character(min(imputeDf$date)), "through",
+		 as.character(max(imputeDf$date))))
+```
+
+Calulate mean and median steps after imputing missing values
+
+```{r}
+imputedMeanSteps <- mean(dailyStepTtl$steps)
+imputedMedianSteps <- median(dailyStepTtl$steps)
+meanSteps; imputedMeanSteps
+medianSteps; imputedMedianSteps
+```
+The imputed Mean and Median are: `r imputedMeanSteps` and `r imputedMedianSteps` respectfully.
+Not surprisingly, the mean and median are the same after imputing the values.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+## defive character vector with weekdays in it
+weekDays <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+## add a new column to the imputed Data Frame and load the "daytype"
+imputeDf$daytype <- c('weekend', 'weekday')[(weekdays(imputeDf$date, abbreviate=FALSE) %in% weekDays)+1L]
+```
+Create panel plot scomparing weekday to weekend activity levels
+```{r}
+suppressWarnings(suppressMessages(library(lattice)))
+## aggregate data and plot with lattice
+dailySteps <- aggregate(steps ~ interval + daytype, imputeDf, mean)
+
+xyplot(steps ~ interval | daytype, dailySteps, type = "l",
+	layout = c(1, 2),
+	ylab = "Step Count",
+	xlab = "Interval",
+	main = "Panel plot of weekday vs. weekend day step activity")
+```
